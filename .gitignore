@@ -1,0 +1,71 @@
+# 虚拟环境
+venv/
+ENV/
+env/
+
+# 依赖清单（可选，但通常提交 requirements.txt）
+# 不要忽略 requirements.txt！
+
+# 其他
+__pycache__/
+*.pyc
+.DS_Store
+
+# pip 配置（不要提交！）
+pip.ini
+
+# 单元测试
+.coverage
+
+
+
+# ==================后来加的==========================
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+*.pyo
+*.pyi
+
+# Virtual Environment
+venv/
+.env/
+.env
+ENV/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+*.egg
+*.whl
+*.tar.gz
+*.zip
+
+# Logs
+*.log
+contact_app.log
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+
+# ==================自定义的排除文件==========================
+copy.jpeg
+hello.txt
+my_note.txt
+photo.jpeg
+students.csv
+contacts_data/
+data/
+*.json
