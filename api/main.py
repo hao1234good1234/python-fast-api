@@ -182,15 +182,6 @@ def get_user(user_id: str) -> UserPublic:
     return UserPublic(user_id=user.user_id, name=user.name)
 
 
-@app.get("/books/{isbn}")
-def get_book(isbn: str, is_admin: bool = False):
-    book = library_service.get_book_by_isbn(isbn)
-    if is_admin:
-        return BookResponse.model_validate(book)
-    else:
-        return BookSummary.model_validate(book)  # 不带 borrowed_by
-
-
 # 启动项目
 # uvicorn main:app --reload
 # 修改端口
