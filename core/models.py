@@ -15,6 +15,6 @@ class Book:
 class User:
     user_id: str  # 用户ID
     name: str  # 姓名
-
+    password_hash: str  # ← 敏感！不能返回给前端
 
 # ✅ 用 `dataclass` 简化类，专注业务语义
