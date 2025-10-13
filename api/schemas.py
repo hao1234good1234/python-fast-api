@@ -54,3 +54,7 @@ class UserPublic(BaseModel):
     user_id: str
     name: str
     # 注意：没有 password_hash！
+
+class BorrowRequest(BaseModel):
+    user_id: str
+    isbn: str

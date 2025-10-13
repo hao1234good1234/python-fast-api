@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))  # 添加父目录
 from unittest.mock import Mock
 from core.models import Book, User
-from core.services import LibraryService
+from core.services_json import LibraryService
 
 
 class TestLibraryService:
