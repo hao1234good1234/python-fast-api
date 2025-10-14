@@ -1,10 +1,11 @@
 from sqlalchemy.orm import Session  # SQLAlchemy 的数据库会话
 from database.models import BookDB  # ORM 模型（对应数据库表）
 from core.models import Book  # 业务模型（纯 Python 对象，不含数据库细节）
+from infrastructure.interfaces import BookRepository
 
 
 # 定义一个“书本仓库”类，专门负责和数据库打交道
-class SqlAlchemyBookRepository:
+class SqlAlchemyBookRepository(BookRepository):
     # 构造函数：每次创建这个类时，必须传入一个数据库会话（session）
     def __init__(self, session: Session):
         self._session = session  # 把数据库会话保存到实例变量中，后面 CRUD 都要用它
@@ -24,7 +25,7 @@ class SqlAlchemyBookRepository:
             title=book.title,
             author=book.author,
             is_borrowed=book.is_borrowed,
-            borrowed_by=book.borrowed_by,
+            borrowed_by=book.borrowed_by
         )
         # 2. 告诉 SQLAlchemy：“我要把这个对象加到数据库里”
         self._session.add(db_book)
@@ -110,6 +111,25 @@ class SqlAlchemyBookRepository:
         return False
 
     # ───────────────────────────────
+    # 查询：获取已借阅的图书
+    # ───────────────────────────────
+    def get_borrows_by_user(self, user_id: str) -> list[Book]:
+        # ✅ SQLAlchemy ORM 写法（自动参数化）
+        db_books = (
+            self._session.query(BookDB)
+            .filter(BookDB.borrowed_by == user_id, BookDB.is_borrowed == True)
+            .all()
+        )
+        return [self._to_domain(db_book) for db_book in db_books]
+
+    # ───────────────────────────────
+    # 查询：获取所有可借阅的图书
+    # ───────────────────────────────
+    def get_all_available(self) -> list[Book]:
+        db_books = self._session.query(BookDB).filter(BookDB.is_borrowed == False).all()
+        return [self._to_domain(db_book) for db_book in db_books]
+
+    # ───────────────────────────────
     # 辅助方法：ORM 模型 → 业务模型
     # ───────────────────────────────
     def _to_domain(self, db_book: BookDB) -> Book:
@@ -122,5 +142,5 @@ class SqlAlchemyBookRepository:
             title=db_book.title,
             author=db_book.author,
             is_borrowed=db_book.is_borrowed,
-            borrowed_by=db_book.borrowed_by,
+            borrowed_by=db_book.borrowed_by
         )

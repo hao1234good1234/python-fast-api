@@ -1,7 +1,9 @@
 #  第四步：定义 ORM 模型（`database/models.py`）
+# SQLAlchemy 模型
 from sqlalchemy import Column, String, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 
+# 4. 声明基类（用于定义模型）
 Base = declarative_base()
 
 class BookDB(Base):

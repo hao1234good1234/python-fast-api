@@ -1,5 +1,4 @@
 import logging
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s",
@@ -7,24 +6,13 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()],
     force=True,
 )
-
-from fastapi import FastAPI, HTTPException
-from core.services_json import LibraryService
-from core.models import Book
-from infrastructure.json_repos import JsonUserRepo, JsonBookRepo
-from api.schemas import (
-    BookCreate,
-    BookResponse,
-    to_book_response,
-    BookSummary,
-    BookDetail,
-    UserPublic,
-)
+from fastapi import FastAPI
 from api.routes import books, users, borrows
 
 from database.connection import engine
 from database.models import Base
 import os
+import uvicorn
 
 # ✅ 第一次运行时，`data/library.db` 会自动创建，表也会生成！
 #  Base 不仅是个基类，它还偷偷记住了所有继承它的子类（也就是你的表）！
@@ -39,6 +27,7 @@ Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI(
+    debug=True,
     title="图书馆管理系统",
     description="""
     一个简单的图书借阅系统，支持：
@@ -67,3 +56,5 @@ app.include_router(borrows.router, prefix="/borrows", tags=["借阅管理"])
 # uvicorn main:app --reload
 # 修改端口
 # uvicorn main:app --reload --port=8001
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

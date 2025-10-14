@@ -18,7 +18,7 @@ from api.schemas import (
     to_book_response,
     BookSummary,
     BookDetail,
-    UserPublic,
+    UserResponse,
 )
 
 from database.connection import engine
@@ -181,21 +181,21 @@ def get_user_books(user_id: str) -> list[BookResponse]:
 
 # ✅ **神奇之处**：只要字段名和类型匹配，FastAPI 会自动把 `dataclass` / `dict` / `ORM model` 转成 Pydantic 模型！
 # ← 即使返回的是 Book(dataclass)，FastAPI 会自动转成 BookResponse！
-# 现在User和UserPublic的字段不一样，不能自动转换！需要手动转换：UserPublic(user_id=user.user_id, name=user.name)
+# 现在User和UserResponse的字段不一样，不能自动转换！需要手动转换：UserResponse(user_id=user.user_id, name=user.name)
 
 
 @app.get(
     "/users/{user_id}",
-    response_model=UserPublic,
+    response_model=UserResponse,
     summary="获取用户信息",
     description="获取用户信息：\n- `user_id`：用户的 ID",
     tags=["用户管理"],
 )
-def get_user(user_id: str) -> UserPublic:
+def get_user(user_id: str) -> UserResponse:
     user = user_repo.get_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
-    return UserPublic(user_id=user.user_id, name=user.name)
+    return UserResponse(user_id=user.user_id, name=user.name)
 
 
 # 启动项目

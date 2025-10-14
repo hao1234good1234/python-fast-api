@@ -1,30 +1,28 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from core.models import User
-from infrastructure.user_repository import SqlAlchemyUserRepository
-from infrastructure.database import get_db_session
+from core.services import LibraryService
+from api.schemas import UserCreate, UserResponse, to_user_response
+from api.dependencies import get_library_service
 
 router = APIRouter()
 
-@router.post("/", response_model=User,summary="创建用户")
-def create_user(user: User, session: Session = Depends(get_db_session)):
-    repo = SqlAlchemyUserRepository(session)
-    existing = repo.get_by_id(user.user_id)
+@router.post("/", response_model=UserResponse,summary="创建用户")
+def create_user(user: UserCreate, service: LibraryService = Depends(get_library_service)):
+    existing = service.get_user_by_id(user.user_id)
     if existing:
         raise HTTPException(status_code=400, detail="用户已存在")
-    return repo.create(user)
+    added_user = service.add_user(User(user_id=user.user_id, name=user.name))
+    return to_user_response(added_user)
 
-@router.get("/{user_id}", response_model=User, summary="根据ID获取用户")
-def get_user(user_id: str, session: Session = Depends(get_db_session)):
-    repo = SqlAlchemyUserRepository(session)
-    user = repo.get_by_id(user_id)
+@router.get("/{user_id}", response_model=UserResponse, summary="根据ID获取用户")
+def get_user(user_id: str, service: LibraryService = Depends(get_library_service)):
+    user = service.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
-    return user
+    return to_user_response(user)
 
-@router.get("/", response_model=list[User], summary="获取所有用户")
-def list_users(session: Session = Depends(get_db_session)):
-    repo = SqlAlchemyUserRepository(session)
-    return repo.get_all()
+@router.get("/", response_model=list[UserResponse], summary="获取所有用户")
+def list_users(service: LibraryService = Depends(get_library_service)):
+    return [to_user_response(user) for user in service.get_all_users()]
 
 
