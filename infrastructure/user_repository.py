@@ -6,8 +6,8 @@ from infrastructure.interfaces import UserRepository
 class SqlAlchemyUserRepository(UserRepository):
     def __init__(self, session: Session):
         self._session = session
-    def create(self, user: User) -> User:
-        db_user = UserDB(user_id=user.user_id, name=user.name)
+    def create(self, user: User, hashed_pw: str) -> User:
+        db_user = UserDB(user_id=user.user_id, name=user.name, username=user.username, is_active=user.is_active, hashed_password=hashed_pw)
         self._session.add(db_user)
         self._session.commit()
         self._session.refresh(db_user) # 获取数据库生成的值（如默认值）
@@ -20,8 +20,12 @@ class SqlAlchemyUserRepository(UserRepository):
     def get_all(self) -> list[User]:
         db_users = self._session.query(UserDB).all()
         return [self._to_domain(db_user) for db_user in db_users]
+    
+    def get_by_username(self, username: str) -> User | None:
+        db_user = self._session.query(UserDB).filter(UserDB.username == username).first()
+        return self._to_domain(db_user) if db_user else None
 
     def _to_domain(self, db_user: UserDB) -> User:
-        return User(user_id=db_user.user_id, name=db_user.name)
+        return User(user_id=db_user.user_id, name=db_user.name, username=db_user.username, is_active=db_user.is_active)
     
     # 💡 User 暂时不实现 update/delete（按需添加）

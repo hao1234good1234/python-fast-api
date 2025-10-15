@@ -4,7 +4,8 @@ from core.models import Book, User
 from infrastructure.interfaces import UserRepository, BookRepository
 from infrastructure.book_repository import SqlAlchemyBookRepository
 from infrastructure.user_repository import SqlAlchemyUserRepository
-
+from core.dtos import UserCreateDto
+from core.security import get_password_hash
 # 1. **单一职责原则（SRP）**
 
 # - `LibraryService` 负责 **资源管理**：图书和用户的 **增删改查（CRUD）**
@@ -23,6 +24,8 @@ from infrastructure.user_repository import SqlAlchemyUserRepository
 # 这些都属于 **借阅领域**，不应污染基础资源管理。
 
 class LibraryService:
+
+    # 图书相关方法
     def __init__(self, user_repo: UserRepository, book_repo: BookRepository):
         self.book_repo = book_repo
         self.user_repo = user_repo
@@ -36,8 +39,24 @@ class LibraryService:
         return self.book_repo.update(book)
     def delete_book(self, isbn: str) -> None:
         return self.book_repo.delete(isbn)
-    def add_user(self, user: User) -> User:
-        return self.user_repo.create(user)
+    
+    # 用户相关方法
+    def add_user(self, user_create: UserCreateDto) -> User: # 注意：传入的是带 password 的 DTO
+        existing = self.user_repo.get_by_id(user_create.user_id)
+        if existing:
+            raise ValueError("用户已存在")
+        # 检查用户名是否已经存在
+        existing_user = self.user_repo.get_by_username(user_create.username)
+        if existing_user:
+            raise ValueError("用户名已存在")
+        hashed_pw = get_password_hash(user_create.password)
+        user = User(
+            user_id=user_create.user_id,
+            name=user_create.name,
+            username=user_create.username,
+            is_active=True
+        )
+        return self.user_repo.create(user, hashed_pw)
     def get_user_by_id(self, user_id: str) -> User:
         return self.user_repo.get_by_id(user_id)
     def get_all_users(self) -> list[User]:

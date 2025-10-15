@@ -52,17 +52,25 @@ class BookDetail(BookSummary): # 继承复用
 
 
 # 定义安全的请求模型
-class UserCreate(BaseModel):
-    user_id: str = Field(..., description="用户 ID", example="u1")
-    name: str = Field(..., description="用户姓名", example="张三")
+class UserCreateSchema(BaseModel):
+    user_id: str = Field(..., description="用户 ID", example="u001")
+    name: str = Field(..., description="用户姓名", example="张三") # `name` 是用于展示的昵称或真实姓名（可重复、可修改）
+    username: str = Field(..., description="用户登录名", example="zhangsan")  # **`username` 是用于登录的身份凭证（唯一、不可变）
+    password: str # 明文用于传输,不要保存在数据库中！只用于后端验证！不返回给前端！
 
 # 定义安全的响应模型： @dataclassUser的password_hash: str属性比较敏感！不能返回给前端
 class UserResponse(BaseModel):
-    user_id: str = Field(..., description="用户 ID", example="u1")
+    user_id: str = Field(..., description="用户 ID", example="u001")
     name: str = Field(..., description="用户姓名", example="张三")
-    # 注意：没有 password_hash！
+    username: str = Field(..., description="用户登录名", example="zhangsan")
+    # 不返回 hashed_password！
+    # ⚠️ 注意：**永远不要把 `password` 字段存入数据库或返回给前端！**
+    # ✅ 不要包含 hashed_password —— domain 层和 API 层都不该接触密码哈希！
+
+
+
 def to_user_response(user: User) -> UserResponse:
-    return UserResponse(user_id=user.user_id, name=user.name)
+    return UserResponse(user_id=user.user_id, name=user.name, username=user.username)
 
 
 class BorrowRequest(BaseModel):

@@ -25,11 +25,14 @@ class BookRepository(ABC):
         pass
 class UserRepository(ABC):
     @abstractmethod
-    def create(self, user: User) -> User:
+    def create(self, user: User, hashed_pw: str) -> User:
         pass
     @abstractmethod
     def get_by_id(self, user_id: str) -> User | None:
         pass
     @abstractmethod
     def get_all(self) -> list[User]:
+        pass
+    @abstractmethod
+    def get_by_username(self, username: str) -> User | None:
         pass
