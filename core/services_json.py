@@ -1,6 +1,6 @@
 # ⚙️ 第三步：实现核心业务逻辑（`core/services.py`）
 from .models import Book
-from .interfaces import UserRepository, BookRepository
+from .interfaces_json import UserRepository, BookRepository
 import logging  # 👈 只用于 getLogger，不配置！
 
 # 创建一个 logger，名字通常是当前模块名

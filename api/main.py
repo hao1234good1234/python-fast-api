@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from api.routes import books, users, borrows, auth
 
 from database.connection import engine
-from database.models import Base
+from infrastructure.models import Base
 import os
 import uvicorn
 

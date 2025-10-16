@@ -76,7 +76,6 @@ def to_user_response(user: User) -> UserResponse:
 
 # 借阅管理
 class BorrowRequest(BaseModel):
-    user_id: str = Field(..., description="用户 ID", example="u1")
     isbn: str = Field(..., description="国际标准书号", example="999-0134685994")
 
 # 公共通用响应

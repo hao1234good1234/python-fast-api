@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
-from database.models import UserDB
+from .models import UserDB
 from core.models import User
-from infrastructure.interfaces import UserRepository
+from core.interfaces import UserRepository
 from core.dtos import UserCreateDto
 
 class SqlAlchemyUserRepository(UserRepository):

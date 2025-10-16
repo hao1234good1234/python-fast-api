@@ -1,17 +1,39 @@
 #  第二步：定义抽象接口（`core/interfaces.py`）
-from typing import Protocol
+from abc import ABC, abstractmethod
 from .models import Book, User
+from .dtos import UserCreateDto
 
+class BookRepository(ABC):
+    @abstractmethod
+    def get_by_isbn(self, isbn: str) -> Book | None: 
+        pass
+    @abstractmethod
+    def get_all(self) -> list[Book]: 
+        pass
+    @abstractmethod
+    def save(self, book: Book) -> None:
+        """保存图书状态（无论是新建还是修改）"""
+        pass
+    @abstractmethod
+    def delete(self, isbn: str) -> bool:
+        pass
+    @abstractmethod
+    def get_borrows_by_user(self, user_id: str) -> list[Book]:
+        pass
+    @abstractmethod
+    def get_all_available(self) -> list[Book]:
+        pass
+class UserRepository(ABC):
+    @abstractmethod
+    def add(self, user: UserCreateDto) -> User:
+        pass
+    @abstractmethod
+    def get_by_id(self, user_id: str) -> User | None:
+        pass
+    @abstractmethod
+    def get_all(self) -> list[User]:
+        pass
+    @abstractmethod
+    def get_by_username(self, username: str) -> User | None:
+        pass
 
-class BookRepository(Protocol):  # 定义图书接口
-    def get_by_isbn(self, isbn: str) -> Book | None: ...  # 根据 isbn 获取图书
-    def save(self, book: Book) -> None: ...  # 保存图书
-    def list_all(self) -> list[Book]: ...  # 获取所有图书
-
-
-class UserRepository(Protocol):  # 定义用户接口
-    def get_by_id(self, user_id: str) -> User | None: ...  # 根据 id 获取用户
-    def save(self, user: User) -> None: ...  # 保存用户
-
-
-# ✅ 这就是你学的 `Protocol` —— 定义“角色”，不绑定实现

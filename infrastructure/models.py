@@ -9,11 +9,11 @@ Base = declarative_base()
 
 class BookDB(Base):
     __tablename__ = "books"
-    isbn = Column(String, primary_key=True, index=True)
+    isbn = Column(String, primary_key=True, index=True)  # ISBN 作主键！
     title = Column(String, nullable=False)
     author = Column(String, nullable=False)
-    is_borrowed = Column(Boolean, default=False, nullable=False)
-    borrowed_by = Column(String, ForeignKey("users.user_id"), nullable=True)
+    is_borrowed = Column(Boolean, default=False, nullable=False) # 是否被借出
+    borrowed_by = Column(String, ForeignKey("users.user_id"), nullable=True) # 借书人 user_id
 
 
 class UserDB(Base):

@@ -1,27 +1,10 @@
 # 创建借阅服务（Borrow Service）
-from sqlalchemy.orm import Session
 from core.models import Book, User
-from infrastructure.interfaces import UserRepository, BookRepository
-from infrastructure.book_repository import SqlAlchemyBookRepository
-from infrastructure.user_repository import SqlAlchemyUserRepository
+from core.interfaces import UserRepository, BookRepository
 from core.dtos import UserCreateDto
-from core.security import get_password_hash, verify_password
-# 1. **单一职责原则（SRP）**
+from core.security import verify_password
 
-# - `LibraryService` 负责 **资源管理**：图书和用户的 **增删改查（CRUD）**
-# - `BorrowService` 负责 **业务流程**：借书、还书、查询借阅记录（涉及状态变更和业务规则）
-
-# > 把“管理图书”和“处理借阅”混在一起，会让 `LibraryService` 越来越臃肿，职责不清。
-# 2. **业务边界清晰**
-
-# - 图书馆系统中，“图书/用户管理” 和 “借阅流程” 是两个不同的业务域。
-# - 未来可能扩展：
-#   - 借阅规则（比如每人最多借5本）
-#   - 逾期罚款
-#   - 预约功能
-#   - 借阅历史审计
-
-# 这些都属于 **借阅领域**，不应污染基础资源管理。
+# - `LibraryService` 负责 **资源管理**：图书和用户的 **增删改查（CRUD）,以及用户的 **借阅**
 
 class LibraryService:
 
@@ -29,15 +12,15 @@ class LibraryService:
     def __init__(self, user_repo: UserRepository, book_repo: BookRepository):
         self.book_repo = book_repo
         self.user_repo = user_repo
-    def add_book(self, book: Book) -> Book:
-        return self.book_repo.create(book)
+    def add_book(self, book: Book) -> None:
+        return self.book_repo.save(book)
     def get_book_by_isbn(self, isbn: str) -> Book:
         return self.book_repo.get_by_isbn(isbn)
     def get_all_books(self) -> list[Book]:
         return self.book_repo.get_all()
-    def update_book(self, book: Book) -> Book:
-        return self.book_repo.update(book)
-    def delete_book(self, isbn: str) -> None:
+    def update_book(self, book: Book) -> None:
+        return self.book_repo.save(book)
+    def delete_book(self, isbn: str) -> bool:
         return self.book_repo.delete(isbn)
     
     # 用户相关方法
@@ -61,34 +44,30 @@ class LibraryService:
         if not verify_password(password, user.hashed_password):
             return None
         return user
+    
 
-        
-class BorrowService:
-    def __init__(self, user_repo: UserRepository, book_repo: BookRepository):
-        self.book_repo = book_repo
-        self.user_repo = user_repo
-
-    def borrow_book(self, user_id: str, isbn: str) -> Book:
-        # 1、检查用户是否存在
-        user = self.user_repo.get_by_id(user_id)
-        if not user:
-            raise ValueError("用户不存在")
+    # 借阅相关方法
+    def borrow_book(self, user: User, isbn: str) -> Book:
+        # 1、检查用户是否可用（比如没有封号）
+        if not user.is_active:
+            raise ValueError("用户账号已被禁用")
 
         # 2. 检查图书是否存在
         book = self.book_repo.get_by_isbn(isbn)
         if not book:
             raise ValueError("图书不存在")
 
-        # 3. 检查图书是否已经被借出
-        if book.is_borrowed:
-            raise ValueError("图书已经被借出")
-        # 4. 更新图书的借阅状态
-        book.is_borrowed = True
-        book.borrowed_by = user_id
-        updated_book = self.book_repo.update(book)
-        return updated_book
+        # 3. 调用 Book 自己的 borrow 方法！（业务规则在模型内部）
+        book.borrow(user.user_id) # ← 这里会自动检查是否已被借
+
+        # 4. 保存更新后的图书状态到数据库
+        self.book_repo.save(book)
+
+        # 5. 返回借完后的图书信息（给 API 用）
+        return book
+
     
-    def return_book(self, isbn: str) -> Book:
+    def return_book(self, isbn: str) -> None:
         # 1. 检查图书是否存在
         book = self.book_repo.get_by_isbn(isbn)
         if not book:
@@ -99,9 +78,8 @@ class BorrowService:
         # 3. 还书：重置状态
         book.is_borrowed = False
         book.borrowed_by = None
-        updated_book = self.book_repo.update(book)
+        self.book_repo.save(book)
 
-        return updated_book
     def get_borrows_by_user_id(self, user_id: str) -> list[Book]:
         # 1. 检查用户是否存在
         user = self.user_repo.get_by_id(user_id)

@@ -4,7 +4,6 @@ import json
 # import os
 from pathlib import Path
 from core.models import User, Book
-# from core.interfaces import UserRepository, BookRepository
 
 # E:\Projects\vscode\python-demo\library_system\data
 # 将数据文件放在项目根目录library_system\data
