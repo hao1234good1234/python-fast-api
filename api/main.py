@@ -7,7 +7,7 @@ logging.basicConfig(
     force=True,
 )
 from fastapi import FastAPI
-from api.routes import books, users, borrows
+from api.routes import books, users, borrows, auth
 
 from database.connection import engine
 from database.models import Base
@@ -52,6 +52,8 @@ app.include_router(books.router, prefix="/books", tags=["图书管理"])
 app.include_router(users.router, prefix="/users", tags=["用户管理"])
 
 app.include_router(borrows.router, prefix="/borrows", tags=["借阅管理"])
+
+app.include_router(auth.router, prefix="/auth", tags=["受保护的路由"])
 # 启动项目
 # uvicorn main:app --reload
 # 修改端口

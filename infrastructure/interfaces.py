@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from core.models import Book, User
+from core.dtos import UserCreateDto
 
 class BookRepository(ABC):
     @abstractmethod
@@ -25,7 +26,7 @@ class BookRepository(ABC):
         pass
 class UserRepository(ABC):
     @abstractmethod
-    def create(self, user: User, hashed_pw: str) -> User:
+    def add(self, user: UserCreateDto) -> User:
         pass
     @abstractmethod
     def get_by_id(self, user_id: str) -> User | None:

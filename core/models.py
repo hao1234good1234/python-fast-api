@@ -2,6 +2,7 @@
 # dataclass类型
 from dataclasses import dataclass
 
+# 在 @dataclass 中，所有没有默认值的字段必须写在有默认值的字段前面。
 
 @dataclass
 class Book:
@@ -15,10 +16,13 @@ class Book:
 @dataclass
 class User:
     user_id: str  # 用户ID
-    name: str  # 姓名
     username: str  # 用户名
-    is_active: bool = True # 是否可用
+    name: str  # 姓名
+    hashed_password: str  # ← 必须加上！
+    is_active: bool = True # 是否可用  有默认值的属性需要放在没有默认值的属性后面
+
     # ✅ 不要包含 hashed_password —— domain 层和 API 层都不该接触密码哈希！
+
 
 
 

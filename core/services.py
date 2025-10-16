@@ -5,7 +5,7 @@ from infrastructure.interfaces import UserRepository, BookRepository
 from infrastructure.book_repository import SqlAlchemyBookRepository
 from infrastructure.user_repository import SqlAlchemyUserRepository
 from core.dtos import UserCreateDto
-from core.security import get_password_hash
+from core.security import get_password_hash, verify_password
 # 1. **单一职责原则（SRP）**
 
 # - `LibraryService` 负责 **资源管理**：图书和用户的 **增删改查（CRUD）**
@@ -41,26 +41,26 @@ class LibraryService:
         return self.book_repo.delete(isbn)
     
     # 用户相关方法
-    def add_user(self, user_create: UserCreateDto) -> User: # 注意：传入的是带 password 的 DTO
-        existing = self.user_repo.get_by_id(user_create.user_id)
-        if existing:
-            raise ValueError("用户已存在")
+    def add_user(self, user_create: UserCreateDto) -> User: # 注意：传入的是带 hashed_password 的 DTO
         # 检查用户名是否已经存在
         existing_user = self.user_repo.get_by_username(user_create.username)
         if existing_user:
             raise ValueError("用户名已存在")
-        hashed_pw = get_password_hash(user_create.password)
-        user = User(
-            user_id=user_create.user_id,
-            name=user_create.name,
-            username=user_create.username,
-            is_active=True
-        )
-        return self.user_repo.create(user, hashed_pw)
+        # 推荐：api调用service的add_user时，已传入已经加密过的密码
+        return self.user_repo.add(user_create)
     def get_user_by_id(self, user_id: str) -> User:
         return self.user_repo.get_by_id(user_id)
     def get_all_users(self) -> list[User]:
         return self.user_repo.get_all()
+    
+    # **重要**：你的 `User` 领域模型 **必须包含 `hashed_password`**，否则无法验证！
+    def authenticate_user(self, username: str, password: str) -> User:
+        user = self.user_repo.get_by_username(username)
+        if not user:
+            return None
+        if not verify_password(password, user.hashed_password):
+            return None
+        return user
 
         
 class BorrowService:

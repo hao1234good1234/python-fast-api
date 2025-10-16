@@ -6,7 +6,7 @@ from core.models import Book, User
 # - 校验字段是否存在、类型是否正确
 # - 提供类型提示和文档
 
-
+# 图书管理
 # 给 `BookCreate` 添加字段说明和示例：
 # ...（必填）是必填的字段
 class BookCreate(BaseModel):
@@ -50,32 +50,35 @@ class BookDetail(BookSummary): # 继承复用
 
 
 
-
+# 用户管理
 # 定义安全的请求模型
-class UserCreateSchema(BaseModel):
-    user_id: str = Field(..., description="用户 ID", example="u001")
-    name: str = Field(..., description="用户姓名", example="张三") # `name` 是用于展示的昵称或真实姓名（可重复、可修改）
-    username: str = Field(..., description="用户登录名", example="zhangsan")  # **`username` 是用于登录的身份凭证（唯一、不可变）
-    password: str # 明文用于传输,不要保存在数据库中！只用于后端验证！不返回给前端！
 
-# 定义安全的响应模型： @dataclassUser的password_hash: str属性比较敏感！不能返回给前端
+#用户注册
+class UserRegisterSchema(BaseModel):
+    username: str = Field(..., description="用户登录名", example="zhangsan")  # **`username` 是用于登录的身份凭证（唯一、不可变）
+    password: str = Field(..., description="用户密码", example="请输入密码") # 明文用于传输,不要保存在数据库中！只用于后端验证！不返回给前端！
+    name: str = Field(..., description="用户姓名", example="张三") # `name` 是用于展示的昵称或真实姓名（可重复、可修改）
+
+
 class UserResponse(BaseModel):
     user_id: str = Field(..., description="用户 ID", example="u001")
-    name: str = Field(..., description="用户姓名", example="张三")
     username: str = Field(..., description="用户登录名", example="zhangsan")
+    name: str = Field(..., description="用户姓名", example="张三")
+    is_active: bool = Field(..., description="是否激活", example=True)
+    # 🔒 **注意**：`password` 只在请求中出现，**绝不在响应中返回**！
     # 不返回 hashed_password！
     # ⚠️ 注意：**永远不要把 `password` 字段存入数据库或返回给前端！**
     # ✅ 不要包含 hashed_password —— domain 层和 API 层都不该接触密码哈希！
 
-
-
 def to_user_response(user: User) -> UserResponse:
-    return UserResponse(user_id=user.user_id, name=user.name, username=user.username)
+    return UserResponse(user_id=user.user_id, name=user.name, username=user.username, is_active=user.is_active)
 
 
+# 借阅管理
 class BorrowRequest(BaseModel):
     user_id: str = Field(..., description="用户 ID", example="u1")
     isbn: str = Field(..., description="国际标准书号", example="999-0134685994")
 
+# 公共通用响应
 class CommonResponse(BaseModel):
     message: str
