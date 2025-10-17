@@ -47,9 +47,9 @@ def login_for_access_token(
     access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires) # 通常用 username 或 user_id 作为 subject
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.get("/{user_id}", response_model=UserResponse, summary="根据ID获取用户")
-def get_user(user_id: str, service: LibraryService = Depends(get_library_service)):
-    user = service.get_user_by_id(user_id)
+@router.get("/{username}", response_model=UserResponse, summary="根据用户名获取用户")
+def get_user(username: str, service: LibraryService = Depends(get_library_service)):
+    user = service.get_user_by_username(username)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     return to_user_response(user)

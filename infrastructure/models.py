@@ -1,10 +1,13 @@
 #  第四步：定义 ORM 模型（`database/models.py`）
 # SQLAlchemy 模型
-from sqlalchemy import Column, String, Boolean, ForeignKey
+from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime, Integer
 from sqlalchemy.ext.declarative import declarative_base
-
+from datetime import datetime
 # 4. 声明基类（用于定义模型）
 Base = declarative_base()
+
+
+#  注意：这是 **数据库模型**，和你 `core/models.py` 中的 `Book`、`User`（业务模型）是分开的！
 
 
 class BookDB(Base):
@@ -12,8 +15,10 @@ class BookDB(Base):
     isbn = Column(String, primary_key=True, index=True)  # ISBN 作主键！
     title = Column(String, nullable=False)
     author = Column(String, nullable=False)
-    is_borrowed = Column(Boolean, default=False, nullable=False) # 是否被借出
-    borrowed_by = Column(String, ForeignKey("users.user_id"), nullable=True) # 借书人 user_id
+    is_borrowed = Column(Boolean, default=False, nullable=False)  # 是否被借出
+    borrowed_by = Column(
+        String, ForeignKey("users.user_id"), nullable=True
+    )  # 借书人 user_id
 
 
 class UserDB(Base):
@@ -33,4 +38,20 @@ class UserDB(Base):
     is_active = Column(Boolean, default=True)
     # ⚠️ 注意：**永远不要把 `password` 字段存入数据库或返回给前端！**
 
-#  注意：这是 **数据库模型**，和你 `core/models.py` 中的 `Book`、`User`（业务模型）是分开的！
+
+class BorrowRecordDB(Base):
+    __tablename__ = "borrows"
+    id = Column(Integer, primary_key=True, index=True)
+    book_isbn = Column(String, ForeignKey("books.isbn"), nullable=False)
+    borrower_id = Column(String, nullable=False)  # 借书人 ID（如 "user123"）
+    borrowed_at = Column(DateTime, nullable=False, default=datetime.now())
+    due_date = Column(DateTime, nullable=False)
+    returned_at = Column(DateTime, nullable=True)
+    is_returned = Column(Boolean, default=False)
+    is_overdue = Column(Boolean, default=False)
+
+#     - 每次借书，**新增一条记录**
+# - `due_date = borrowed_at + 7天`（可配置）
+# - `returned_at` 和 `is_returned` 初始为 `None` / `False`
+
+    # ✅ 图书表 `BookDB` 已有 `is_borrowed` 和 `borrowed_by` 字段。

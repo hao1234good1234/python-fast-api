@@ -1,6 +1,6 @@
 #  第二步：定义抽象接口（`core/interfaces.py`）
 from abc import ABC, abstractmethod
-from .models import Book, User
+from .models import Book, User, BorrowRecord
 from .dtos import UserCreateDto
 
 class BookRepository(ABC):
@@ -35,5 +35,20 @@ class UserRepository(ABC):
         pass
     @abstractmethod
     def get_by_username(self, username: str) -> User | None:
+        pass
+
+class BorrowRepository(ABC):
+    @abstractmethod
+    def create(self, borrow_record: BorrowRecord) -> BorrowRecord:
+        pass
+
+    @abstractmethod
+    def get_by_id(self, borrow_id: int) -> BorrowRecord |None:
+        pass
+    @abstractmethod
+    def save(self, borrow_record: BorrowRecord) -> None:
+        pass
+    @abstractmethod
+    def get_borrows_by_user(self, user_id: str, page: int = 1, size: int = 10) -> tuple[list[BorrowRecord], int]:
         pass
 

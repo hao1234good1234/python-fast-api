@@ -1,6 +1,7 @@
 # Pydantic 模型
 from pydantic import BaseModel, Field
 from core.models import Book, User
+from datetime import datetime
 # `BaseModel` 是 Pydantic 的核心类，它会：
 # - 自动解析 JSON
 # - 校验字段是否存在、类型是否正确
@@ -78,6 +79,48 @@ def to_user_response(user: User) -> UserResponse:
 class BorrowRequest(BaseModel):
     isbn: str = Field(..., description="国际标准书号", example="999-0134685994")
 
+
+class BorrowBookResponse(BaseModel):
+    borrow_id: int
+    book_isbn: str
+    borrower_id: str
+    borrowed_at: datetime
+    due_date: datetime
+    message: str
+   
+
+class ReturnBookResponse(BaseModel): 
+    borrow_id: int
+    book_isbn: str
+    returned_at: datetime
+    is_overdue: bool
+    message: str
+
 # 公共通用响应
 class CommonResponse(BaseModel):
     message: str
+
+
+
+# 分页相关的响应模型
+class BorrowItemResponse(BaseModel):
+    borrow_id: int = Field(alias="id")  # ← 关键！告诉 Pydantic：borrow_id 来自BorrowRecord对象的 id 字段
+    book_isbn: str
+    book_title: str
+    borrowed_at: datetime
+    due_date: datetime
+    returned_at: datetime | None
+    is_returned: bool
+    is_overdue: bool
+
+    
+    class Config:
+        from_attributes = True  # 允许从普通对象（非 dict）读取
+        populate_by_name = True  # 允许通过字段名（即使用了 alias）赋值
+
+class MyBorrowsResponse(BaseModel):
+    items: list[BorrowItemResponse]
+    total: int
+    page: int
+    size: int
+    pages: int

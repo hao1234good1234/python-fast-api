@@ -3,13 +3,14 @@ from sqlalchemy.orm import Session
 from infrastructure.database import get_db_session
 from infrastructure.user_repository import SqlAlchemyUserRepository
 from infrastructure.book_repository import SqlAlchemyBookRepository
-from core.services import LibraryService
+from infrastructure.borrow_repository import SqlAlchemyBorrowRepository
+from core.services import LibraryService, BorrowService
 from fastapi.security import OAuth2PasswordBearer  # 导入 OAuth2PasswordBearer
 from core.models import User 
 from core.security import decode_access_token
-from fastapi import HTTPException,status, Depends
+from fastapi import Depends
 from core.exceptions import UnauthorizedException
-from jose import JWTError, jwt
+from jose import JWTError
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/token")
 
@@ -57,3 +58,10 @@ def get_current_user(
         #  **安全最佳实践**：永远不要区分“用户名不存在”和“密码错误”，避免被暴力枚举用户名。
         raise UnauthorizedException("无法验证凭据")
     return user
+
+
+def get_borrow_service(session: Session = Depends(get_db_session)):
+    return BorrowService(
+        book_repo=SqlAlchemyBookRepository(session),
+        borrow_repo=SqlAlchemyBorrowRepository(session)
+    )

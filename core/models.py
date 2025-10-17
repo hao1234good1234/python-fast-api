@@ -1,8 +1,11 @@
 # 🔧 第一步：定义核心模型（`core/models.py`） 
 # dataclass类型
 from dataclasses import dataclass
-
+from datetime import datetime
+# ✅ 用 `dataclass` 简化类，专注业务语义
 # 在 @dataclass 中，所有没有默认值的字段必须写在有默认值的字段前面。
+
+# 领域模型
 
 @dataclass
 class Book:
@@ -40,7 +43,18 @@ class User:
 
     # ✅ 不要包含 hashed_password —— domain 层和 API 层都不该接触密码哈希！
 
+@dataclass
+class BorrowRecord:
+    id: int | None    # 新借书时为 None
+    book_isbn: str 
+    book_title: str # ← 新增！方便前端展示
+    borrower_id: str # 借书人 ID（比如用户 ID）
+    borrowed_at: datetime # 借书时间
+    due_date: datetime   # 应还日期（比如借7天）
+    returned_at: datetime | None = None # 实际归还时间
+    is_returned: bool = False   # 是否还书
+    is_overdue: bool = False # 是否逾期（可计算，也可持久化）
 
 
 
-# ✅ 用 `dataclass` 简化类，专注业务语义
+

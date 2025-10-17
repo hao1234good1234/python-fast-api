@@ -1,41 +1,54 @@
 # 创建借阅服务（Borrow Service）
-from core.models import Book, User
-from core.interfaces import UserRepository, BookRepository
-from core.dtos import UserCreateDto
+from core.models import Book, User, BorrowRecord
+from core.interfaces import UserRepository, BookRepository, BorrowRepository
+from core.dtos import UserCreateDto, ReturnBookDto, BorrowBookDto
 from core.security import verify_password
+from datetime import datetime, timedelta
 
 # - `LibraryService` 负责 **资源管理**：图书和用户的 **增删改查（CRUD）,以及用户的 **借阅**
 
-class LibraryService:
 
+class LibraryService:
     # 图书相关方法
     def __init__(self, user_repo: UserRepository, book_repo: BookRepository):
         self.book_repo = book_repo
         self.user_repo = user_repo
+
     def add_book(self, book: Book) -> None:
         return self.book_repo.save(book)
+
     def get_book_by_isbn(self, isbn: str) -> Book:
         return self.book_repo.get_by_isbn(isbn)
+
     def get_all_books(self) -> list[Book]:
         return self.book_repo.get_all()
+
     def update_book(self, book: Book) -> None:
         return self.book_repo.save(book)
+
     def delete_book(self, isbn: str) -> bool:
         return self.book_repo.delete(isbn)
-    
+
     # 用户相关方法
-    def add_user(self, user_create: UserCreateDto) -> User: # 注意：传入的是带 hashed_password 的 DTO
+    def add_user(
+        self, user_create: UserCreateDto
+    ) -> User:  # 注意：传入的是带 hashed_password 的 DTO
         # 检查用户名是否已经存在
         existing_user = self.user_repo.get_by_username(user_create.username)
         if existing_user:
             raise ValueError("用户名已存在")
         # 推荐：api调用service的add_user时，已传入已经加密过的密码
         return self.user_repo.add(user_create)
+
     def get_user_by_id(self, user_id: str) -> User:
         return self.user_repo.get_by_id(user_id)
+
     def get_all_users(self) -> list[User]:
         return self.user_repo.get_all()
-    
+
+    def get_user_by_username(self, username: str) -> User:
+        return self.user_repo.get_by_username(username)
+
     # **重要**：你的 `User` 领域模型 **必须包含 `hashed_password`**，否则无法验证！
     def authenticate_user(self, username: str, password: str) -> User:
         user = self.user_repo.get_by_username(username)
@@ -44,49 +57,101 @@ class LibraryService:
         if not verify_password(password, user.hashed_password):
             return None
         return user
-    
 
-    # 借阅相关方法
-    def borrow_book(self, user: User, isbn: str) -> Book:
-        # 1、检查用户是否可用（比如没有封号）
-        if not user.is_active:
-            raise ValueError("用户账号已被禁用")
 
-        # 2. 检查图书是否存在
+class BorrowService:
+    def __init__(self, book_repo: BookRepository, borrow_repo: BorrowRepository):
+        self.book_repo = book_repo
+        self.borrow_repo = borrow_repo
+
+    # 借书
+    def borrow_book(self, isbn: str, borrower_id: str) -> BorrowBookDto:
+        # 1、检查图书是否存在
         book = self.book_repo.get_by_isbn(isbn)
         if not book:
             raise ValueError("图书不存在")
+        # 2. 检查是否已经被借出
+        if book.is_borrowed:
+            raise ValueError("图书已经被借出")
 
-        # 3. 调用 Book 自己的 borrow 方法！（业务规则在模型内部）
-        book.borrow(user.user_id) # ← 这里会自动检查是否已被借
+        # 3. 创建借阅记录
+        now = datetime.now()
+        due_date = now + timedelta(days=7)  # 借阅期限为 7 天
+        borrow = BorrowRecord(
+            id=None,  # 新记录，ID 由数据库生成
+            book_isbn=book.isbn,
+            borrower_id=borrower_id,
+            borrowed_at=now,
+            due_date=due_date,
+        )
 
-        # 4. 保存更新后的图书状态到数据库
+        # 4. 保存借阅记录
+        saved_borrow = self.borrow_repo.create(borrow)
+
+        # 5. 更新图书的状态
+        book.is_borrowed = True
+        book.borrowed_by = borrower_id
         self.book_repo.save(book)
 
-        # 5. 返回借完后的图书信息（给 API 用）
-        return book
+        # 6. 返回结果
+        return BorrowBookDto(
+            borrow_id=saved_borrow.id,
+            book_isbn=saved_borrow.book_isbn,
+            borrower_id=saved_borrow.borrower_id,
+            borrowed_at=saved_borrow.borrowed_at,
+            due_date=saved_borrow.due_date,
+        )
 
-    
-    def return_book(self, isbn: str) -> None:
-        # 1. 检查图书是否存在
-        book = self.book_repo.get_by_isbn(isbn)
-        if not book:
-            raise ValueError("图书不存在")
-        # 2. 检查图书是否已经被借出
-        if not book.is_borrowed:
-            raise ValueError("图书未被借出")
-        # 3. 还书：重置状态
-        book.is_borrowed = False
-        book.borrowed_by = None
-        self.book_repo.save(book)
+    # 还书
+    def return_book(
+        self, borrow_id: int, current_user_id: str
+    ) -> ReturnBookDto:  # borrow_id是borrows表的主键id
+        # 1. 查找借阅记录
+        borrow = self.borrow_repo.get_by_id(borrow_id)
+        if not borrow:
+            raise ValueError("借阅记录不存在")
+        # 2. 验证归属：只有借书人才能还
+        if borrow.borrower_id != current_user_id:
+            raise ValueError("无权归还此图书")
+        # 3.检查是否归还
+        if borrow.is_returned:
+            raise ValueError("该图书已经归还")
+        # 4.检查是否逾期
+        now = datetime.now()
+        is_overdue = now > borrow.due_date
 
-    def get_borrows_by_user_id(self, user_id: str) -> list[Book]:
-        # 1. 检查用户是否存在
-        user = self.user_repo.get_by_id(user_id)
-        if not user:
-            raise ValueError("用户不存在")
-        return self.book_repo.get_borrows_by_user(user_id)
-    
-    def get_available_books(self) -> list[Book]:
-        return self.book_repo.get_all_available()
-      
+        # 5. 更新借阅记录
+        borrow.returned_at = now
+        borrow.is_returned = True
+        borrow.is_overdue = is_overdue
+
+        # 6. 保存借阅记录
+        self.borrow_repo.save(borrow)
+
+        # 7.更新图书的状态，释放图书
+        book = self.book_repo.get_by_isbn(borrow.book_isbn)
+        if book:
+            book.is_borrowed = False
+            book.borrowed_by = None
+            self.book_repo.save(book)
+
+        # 8. 返回借阅记录
+        return ReturnBookDto(
+            borrow_id=borrow.id,
+            book_isbn=borrow.book_isbn,
+            returned_at=now,
+            is_overdue=is_overdue,
+        )
+
+    def get_my_borrows(self, user_id: str, page: int = 1, size: int = 10) -> dict:
+        if page < 1:
+            page = 1
+        if size < 1:
+            size = 10
+        if size > 100:  # 防止恶意请求
+            size = 100
+        # total 该用户借阅记录的总数量
+        borrows, total = self.borrow_repo.get_borrows_by_user(user_id, page, size)
+        pages = (total + size - 1) // size  # 总页数 向上取整 
+
+        return {"items": borrows, "total": total, "page": page, "size": size, "pages": pages}
