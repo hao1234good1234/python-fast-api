@@ -2,7 +2,8 @@
 # SQLAlchemy 模型
 from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime, Integer
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
+from datetime import datetime, timezone
+
 # 4. 声明基类（用于定义模型）
 Base = declarative_base()
 
@@ -44,14 +45,20 @@ class BorrowRecordDB(Base):
     id = Column(Integer, primary_key=True, index=True)
     book_isbn = Column(String, ForeignKey("books.isbn"), nullable=False)
     borrower_id = Column(String, nullable=False)  # 借书人 ID（如 "user123"）
-    borrowed_at = Column(DateTime, nullable=False, default=datetime.now())
-    due_date = Column(DateTime, nullable=False)
-    returned_at = Column(DateTime, nullable=True)
+    # 数据库存时区，DateTime(timezone=True)
+    # - **SQLite**：实际存的是字符串，但 SQLAlchemy 会帮你处理时区
+    # - **PostgreSQL**：原生支持 `TIMESTAMP WITH TIME ZONE`，推荐！
+    borrowed_at = Column(
+        DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc)
+    )
+    due_date = Column(DateTime(timezone=True), nullable=False)
+    returned_at = Column(DateTime(timezone=True), nullable=True)
     is_returned = Column(Boolean, default=False)
     is_overdue = Column(Boolean, default=False)
+
 
 #     - 每次借书，**新增一条记录**
 # - `due_date = borrowed_at + 7天`（可配置）
 # - `returned_at` 和 `is_returned` 初始为 `None` / `False`
 
-    # ✅ 图书表 `BookDB` 已有 `is_borrowed` 和 `borrowed_by` 字段。
+# ✅ 图书表 `BookDB` 已有 `is_borrowed` 和 `borrowed_by` 字段。

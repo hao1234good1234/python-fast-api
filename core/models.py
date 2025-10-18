@@ -1,7 +1,7 @@
 # 🔧 第一步：定义核心模型（`core/models.py`） 
 # dataclass类型
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 # ✅ 用 `dataclass` 简化类，专注业务语义
 # 在 @dataclass 中，所有没有默认值的字段必须写在有默认值的字段前面。
 
@@ -47,13 +47,31 @@ class User:
 class BorrowRecord:
     id: int | None    # 新借书时为 None
     book_isbn: str 
-    book_title: str # ← 新增！方便前端展示
     borrower_id: str # 借书人 ID（比如用户 ID）
     borrowed_at: datetime # 借书时间
     due_date: datetime   # 应还日期（比如借7天）
     returned_at: datetime | None = None # 实际归还时间
-    is_returned: bool = False   # 是否还书
-    is_overdue: bool = False # 是否逾期（可计算，也可持久化）
+    is_returned: bool = False   # 是否还书（持久化）
+    is_overdue: bool = False # 是否逾期（持久化）
+
+    @property # 是否已归还，可计算
+    def is_book_returned(self) -> bool:
+        return self.returned_at is not None
+    
+    # `is_book_overdue` 是 **只读属性（property）**，自动计算
+    # 业务规则 **内聚在模型中**，外部无需知道“超期 = now > due_date and not returned”
+    @property # 是否逾期，可计算
+    def is_book_overdue(self) -> bool:
+        """自动计算是否超期：已过 due_date 且未归还"""
+        if self.is_book_returned: # 已归还，如果归还时间大于应还时间，就是逾期
+            return self.returned_at > self.due_date
+        return datetime.now(timezone.utc) > self.due_date
+    
+    def mark_returned(self):
+        """归还操作封装到模型内部"""
+        if self.is_returned:
+            raise ValueError("图书已归还")
+        self.returned_at = datetime.now(timezone.utc)
 
 
 

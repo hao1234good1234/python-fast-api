@@ -6,4 +6,11 @@ class UnauthorizedException(HTTPException):
             detail=detail_msg,
             headers={"WWW-Authenticate": "Bearer"}
         )
-        
+# 定义业务异常（推荐）
+class ResourceNotFound(Exception):
+    """借阅记录不存在"""
+    pass
+
+class ResourcePermissionDenied(Exception):
+    """无权操作他人的借阅记录"""
+    pass

@@ -1,12 +1,13 @@
 # 创建借阅服务（Borrow Service）
 from core.models import Book, User, BorrowRecord
 from core.interfaces import UserRepository, BookRepository, BorrowRepository
-from core.dtos import UserCreateDto, ReturnBookDto, BorrowBookDto
+from core.dtos import UserCreateDto, ReturnBookDto, BorrowBookDto, MyBorrowDto
 from core.security import verify_password
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from core.exceptions import ResourceNotFound, ResourcePermissionDenied
 
 # - `LibraryService` 负责 **资源管理**：图书和用户的 **增删改查（CRUD）,以及用户的 **借阅**
-
+BORROW_DURATION_DAYS = 7  # 借阅期限：7天
 
 class LibraryService:
     # 图书相关方法
@@ -75,8 +76,9 @@ class BorrowService:
             raise ValueError("图书已经被借出")
 
         # 3. 创建借阅记录
-        now = datetime.now()
-        due_date = now + timedelta(days=7)  # 借阅期限为 7 天
+        # 存储用 UTC，展示用本地时区
+        now = datetime.now(timezone.utc)
+        due_date = now + timedelta(days=BORROW_DURATION_DAYS)  # 借阅期限为 7 天
         borrow = BorrowRecord(
             id=None,  # 新记录，ID 由数据库生成
             book_isbn=book.isbn,
@@ -109,15 +111,15 @@ class BorrowService:
         # 1. 查找借阅记录
         borrow = self.borrow_repo.get_by_id(borrow_id)
         if not borrow:
-            raise ValueError("借阅记录不存在")
-        # 2. 验证归属：只有借书人才能还
+            raise ResourceNotFound("借阅记录不存在")
+        # 2. 【关键】权限校验：是否属于当前用户？
         if borrow.borrower_id != current_user_id:
-            raise ValueError("无权归还此图书")
+            raise ResourcePermissionDenied("无权操作他人的借阅记录")
         # 3.检查是否归还
         if borrow.is_returned:
             raise ValueError("该图书已经归还")
         # 4.检查是否逾期
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         is_overdue = now > borrow.due_date
 
         # 5. 更新借阅记录
@@ -143,7 +145,7 @@ class BorrowService:
             is_overdue=is_overdue,
         )
 
-    def get_my_borrows(self, user_id: str, page: int = 1, size: int = 10) -> dict:
+    def get_my_borrows(self, user_id: str, page: int = 1, size: int = 10) -> MyBorrowDto:
         if page < 1:
             page = 1
         if size < 1:
@@ -151,7 +153,18 @@ class BorrowService:
         if size > 100:  # 防止恶意请求
             size = 100
         # total 该用户借阅记录的总数量
+        # 返回的元组直接解包，赋值给两个变量
         borrows, total = self.borrow_repo.get_borrows_by_user(user_id, page, size)
+        # 客户想在查询的时候直接看到是否已经归还和是否逾期，而数据库中的is_overdue是在还书之后才更新的，所以需要在这里计算
+        for borrow in borrows:
+            borrow.is_returned = borrow.is_book_returned
+            borrow.is_overdue = borrow.is_book_overdue
         pages = (total + size - 1) // size  # 总页数 向上取整 
 
-        return {"items": borrows, "total": total, "page": page, "size": size, "pages": pages}
+        return MyBorrowDto(
+            items=borrows,
+            total=total,
+            page=page,
+            size=size,
+            pages=pages
+        )

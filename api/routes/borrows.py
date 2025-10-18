@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from core.services import BorrowService
 from api.schemas import ReturnBookResponse, BorrowBookResponse, MyBorrowsResponse
 from api.dependencies import get_current_user, get_borrow_service
@@ -6,6 +6,7 @@ from core.models import User
 from infrastructure.database import get_db_session
 from sqlalchemy.orm import Session
 import logging
+from core.exceptions import ResourcePermissionDenied, ResourceNotFound
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -43,6 +44,7 @@ def borrow_book(
 
 
 # patch请求，局部更新，只更新归还相关的字段
+# `get_current_user` 负责 401，`service` 负责 403。
 @router.patch("/{borrow_id}/return", response_model=ReturnBookResponse, summary="还书")
 def return_book(
     borrow_id: int,
@@ -60,6 +62,12 @@ def return_book(
             is_overdue=result.is_overdue,
             message="还书成功",
         )
+    except ResourceNotFound:
+        db.rollback()
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="借阅记录不存在") 
+    except ResourcePermissionDenied:
+        db.rollback()
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="无权操作他人的借阅记录")
     except ValueError as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))

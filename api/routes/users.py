@@ -9,9 +9,10 @@ import uuid
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from core.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token
-router = APIRouter()
 import logging
 logger = logging.getLogger(__name__)
+
+router = APIRouter()
 
 @router.post("/register", response_model=UserResponse,summary="注册用户")
 def create_user(user_in: UserRegisterSchema, service: LibraryService = Depends(get_library_service)):

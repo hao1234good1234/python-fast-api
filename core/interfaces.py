@@ -48,6 +48,8 @@ class BorrowRepository(ABC):
     @abstractmethod
     def save(self, borrow_record: BorrowRecord) -> None:
         pass
+
+    # 返回：元组(记录列表, 总数量)
     @abstractmethod
     def get_borrows_by_user(self, user_id: str, page: int = 1, size: int = 10) -> tuple[list[BorrowRecord], int]:
         pass

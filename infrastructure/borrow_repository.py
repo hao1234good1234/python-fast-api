@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 from core.interfaces import BorrowRepository
 from core.models import BorrowRecord
 from .models import BorrowRecordDB, BookDB
+from core.dtos import BorrowRecordDto
+from datetime import datetime, timezone
 
 
 class SqlAlchemyBorrowRepository(BorrowRepository):
@@ -44,7 +46,7 @@ class SqlAlchemyBorrowRepository(BorrowRepository):
                             user_id: str,
                             page: int = 1,
                             size: int = 10
-) -> tuple[list[BorrowRecord], int]: # 返回借阅记录和总数量
+) -> tuple[list[BorrowRecordDto], int]: # 返回借阅记录和总数量
         """
         分页查询用户的借阅记录（含书名）
         返回: (记录列表, 总数量)
@@ -69,27 +71,38 @@ class SqlAlchemyBorrowRepository(BorrowRepository):
         for db_borrow, book_title in query.all():
             result.append(self._to_domain_with_title(db_borrow, book_title))
         return result, total
-    def _to_domain_with_title(self, db_borrow: BorrowRecordDB, book_title: str) -> BorrowRecord:
-        return BorrowRecord(
+    
+    
+    def _to_domain_with_title(self, db_borrow: BorrowRecordDB, book_title: str) -> BorrowRecordDto:
+        due_date = db_borrow.due_date
+        returned_at = db_borrow.returned_at
+        if due_date.tzinfo is None:
+            dute_date = due_date.replace(tzinfo=timezone.utc)
+        if returned_at.tzinfo is None:
+            returned_at = returned_at.replace(tzinfo=timezone.utc)
+        return BorrowRecordDto(
             id=db_borrow.id,
             book_isbn=db_borrow.book_isbn,
             book_title=book_title,
             borrower_id=db_borrow.borrower_id,
             borrowed_at=db_borrow.borrowed_at,
-            due_date=db_borrow.due_date,
-            returned_at=db_borrow.returned_at,
+            due_date=dute_date,
+            returned_at=returned_at,
             is_returned=db_borrow.is_returned,
             is_overdue=db_borrow.is_overdue,
         )
 
 
     def _to_domain(self, db_borrow: BorrowRecordDB) -> BorrowRecord:
+        due_date = db_borrow.due_date
+        if due_date.tzinfo is None:
+            dute_date = due_date.replace(tzinfo=timezone.utc)
         return BorrowRecord(
             id=db_borrow.id,
             book_isbn=db_borrow.book_isbn,
             borrower_id=db_borrow.borrower_id,
             borrowed_at=db_borrow.borrowed_at,
-            due_date=db_borrow.due_date,
+            due_date=dute_date,
             returned_at=db_borrow.returned_at,
             is_returned=db_borrow.is_returned,
             is_overdue=db_borrow.is_overdue
