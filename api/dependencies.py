@@ -1,6 +1,4 @@
 # `get_library_service` 在多个路由文件中重复定义 改进方案：**统一移到 `api/dependencies.py`**
-from sqlalchemy.orm import Session
-from infrastructure.database import get_db_session
 from infrastructure.user_repository import SqlAlchemyUserRepository
 from infrastructure.book_repository import SqlAlchemyBookRepository
 from infrastructure.borrow_repository import SqlAlchemyBorrowRepository
@@ -8,13 +6,21 @@ from core.services import LibraryService, BorrowService
 from fastapi.security import OAuth2PasswordBearer  # 导入 OAuth2PasswordBearer
 from core.models import User 
 from core.security import decode_access_token
-from fastapi import Depends
+from fastapi import Depends, Request
 from core.exceptions import UnauthorizedException
 from jose import JWTError
+# 告诉 Python：Session 是什么类型
+from sqlalchemy.orm import Session
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/token")
 
-def get_library_service(session: Session = Depends(get_db_session)):
+#使用全局异常处理器，需要定义一个依赖项，统一管理事务
+def get_db(request: Request):
+    return request.state.db
+
+
+
+def get_library_service(session: Session = Depends(get_db)):
     return LibraryService(
         user_repo=SqlAlchemyUserRepository(session),
         book_repo=SqlAlchemyBookRepository(session)
@@ -43,7 +49,7 @@ def get_library_service(session: Session = Depends(get_db_session)):
 
 def get_current_user(
         token: str = Depends(oauth2_scheme), # 从请求/users/token 中获取返回的token
-        db: Session = Depends(get_db_session)
+        db: Session = Depends(get_db)
 ) -> User:
     """根据 token 获取当前用户"""
     try:
@@ -60,7 +66,7 @@ def get_current_user(
     return user
 
 
-def get_borrow_service(session: Session = Depends(get_db_session)):
+def get_borrow_service(session: Session = Depends(get_db)):
     return BorrowService(
         book_repo=SqlAlchemyBookRepository(session),
         borrow_repo=SqlAlchemyBorrowRepository(session)

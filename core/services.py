@@ -4,10 +4,20 @@ from core.interfaces import UserRepository, BookRepository, BorrowRepository
 from core.dtos import UserCreateDto, ReturnBookDto, BorrowBookDto, MyBorrowDto
 from core.security import verify_password
 from datetime import datetime, timedelta, timezone
-from core.exceptions import ResourceNotFound, ResourcePermissionDenied
+from core.exceptions import (
+    BookNotFoundError,
+    BookNotAvailableError,
+    BorrowRecordNotFoundError,
+    PermissionError,
+    BookAlreadyReturnError,
+    UsernameExistsError,
+    BookExistsError,
+    BookNotFoundError,
+)
 
 # - `LibraryService` 负责 **资源管理**：图书和用户的 **增删改查（CRUD）,以及用户的 **借阅**
 BORROW_DURATION_DAYS = 7  # 借阅期限：7天
+
 
 class LibraryService:
     # 图书相关方法
@@ -16,6 +26,9 @@ class LibraryService:
         self.user_repo = user_repo
 
     def add_book(self, book: Book) -> None:
+        existing = self.book_repo.get_by_isbn(book.isbn)
+        if existing:
+            raise BookExistsError(book.isbn)
         return self.book_repo.save(book)
 
     def get_book_by_isbn(self, isbn: str) -> Book:
@@ -25,6 +38,9 @@ class LibraryService:
         return self.book_repo.get_all()
 
     def update_book(self, book: Book) -> None:
+        existing = self.book_repo.get_by_isbn(book.isbn)
+        if not existing:
+            raise BookNotFoundError(book.isbn)
         return self.book_repo.save(book)
 
     def delete_book(self, isbn: str) -> bool:
@@ -35,9 +51,10 @@ class LibraryService:
         self, user_create: UserCreateDto
     ) -> User:  # 注意：传入的是带 hashed_password 的 DTO
         # 检查用户名是否已经存在
-        existing_user = self.user_repo.get_by_username(user_create.username)
+        username = user_create.username
+        existing_user = self.user_repo.get_by_username(username)
         if existing_user:
-            raise ValueError("用户名已存在")
+            raise UsernameExistsError(username)
         # 推荐：api调用service的add_user时，已传入已经加密过的密码
         return self.user_repo.add(user_create)
 
@@ -70,10 +87,10 @@ class BorrowService:
         # 1、检查图书是否存在
         book = self.book_repo.get_by_isbn(isbn)
         if not book:
-            raise ValueError("图书不存在")
+            raise BookNotFoundError(isbn)
         # 2. 检查是否已经被借出
         if book.is_borrowed:
-            raise ValueError("图书已经被借出")
+            raise BookNotAvailableError(isbn, book.title)
 
         # 3. 创建借阅记录
         # 存储用 UTC，展示用本地时区
@@ -111,13 +128,13 @@ class BorrowService:
         # 1. 查找借阅记录
         borrow = self.borrow_repo.get_by_id(borrow_id)
         if not borrow:
-            raise ResourceNotFound("借阅记录不存在")
+            raise BorrowRecordNotFoundError(borrow_id)
         # 2. 【关键】权限校验：是否属于当前用户？
         if borrow.borrower_id != current_user_id:
-            raise ResourcePermissionDenied("无权操作他人的借阅记录")
+            raise PermissionError(current_user_id, borrow.borrower_id)
         # 3.检查是否归还
         if borrow.is_returned:
-            raise ValueError("该图书已经归还")
+            raise BookAlreadyReturnError(borrow_id)
         # 4.检查是否逾期
         now = datetime.now(timezone.utc)
         is_overdue = now > borrow.due_date
@@ -145,7 +162,9 @@ class BorrowService:
             is_overdue=is_overdue,
         )
 
-    def get_my_borrows(self, user_id: str, page: int = 1, size: int = 10) -> MyBorrowDto:
+    def get_my_borrows(
+        self, user_id: str, page: int = 1, size: int = 10
+    ) -> MyBorrowDto:
         if page < 1:
             page = 1
         if size < 1:
@@ -159,12 +178,8 @@ class BorrowService:
         for borrow in borrows:
             borrow.is_returned = borrow.is_book_returned
             borrow.is_overdue = borrow.is_book_overdue
-        pages = (total + size - 1) // size  # 总页数 向上取整 
+        pages = (total + size - 1) // size  # 总页数 向上取整
 
         return MyBorrowDto(
-            items=borrows,
-            total=total,
-            page=page,
-            size=size,
-            pages=pages
+            items=borrows, total=total, page=page, size=size, pages=pages
         )

@@ -21,7 +21,7 @@ from api.schemas import (
     UserResponse,
 )
 
-from database.connection import engine
+from infrastructure.connection import engine
 from database.models import Base
 import os
 

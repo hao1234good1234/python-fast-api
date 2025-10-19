@@ -96,13 +96,13 @@ class SqlAlchemyBorrowRepository(BorrowRepository):
     def _to_domain(self, db_borrow: BorrowRecordDB) -> BorrowRecord:
         due_date = db_borrow.due_date
         if due_date.tzinfo is None:
-            dute_date = due_date.replace(tzinfo=timezone.utc)
+            due_date = due_date.replace(tzinfo=timezone.utc)
         return BorrowRecord(
             id=db_borrow.id,
             book_isbn=db_borrow.book_isbn,
             borrower_id=db_borrow.borrower_id,
             borrowed_at=db_borrow.borrowed_at,
-            due_date=dute_date,
+            due_date=due_date,
             returned_at=db_borrow.returned_at,
             is_returned=db_borrow.is_returned,
             is_overdue=db_borrow.is_overdue

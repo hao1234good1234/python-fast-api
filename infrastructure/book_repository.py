@@ -5,8 +5,8 @@ from core.interfaces import BookRepository
 
 
 # 定义一个“书本仓库”类，专门负责和数据库打交道
-class SqlAlchemyBookRepository(BookRepository):
     # 构造函数：每次创建这个类时，必须传入一个数据库会话（session）
+class SqlAlchemyBookRepository(BookRepository):
     def __init__(self, session: Session):
         self._session = session  # 把数据库会话保存到实例变量中，后面 CRUD 都要用它
 

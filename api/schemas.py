@@ -2,6 +2,7 @@
 from pydantic import BaseModel, Field
 from core.models import Book, User
 from datetime import datetime
+from typing import Any
 # `BaseModel` 是 Pydantic 的核心类，它会：
 # - 自动解析 JSON
 # - 校验字段是否存在、类型是否正确
@@ -80,22 +81,6 @@ class BorrowRequest(BaseModel):
     isbn: str = Field(..., description="国际标准书号", example="999-0134685994")
 
 
-class BorrowBookResponse(BaseModel):
-    borrow_id: int
-    book_isbn: str
-    borrower_id: str
-    borrowed_at: datetime
-    due_date: datetime
-    message: str
-   
-
-class ReturnBookResponse(BaseModel): 
-    borrow_id: int
-    book_isbn: str
-    returned_at: datetime
-    is_overdue: bool
-    message: str
-
 # 公共通用响应
 class CommonResponse(BaseModel):
     message: str
@@ -124,3 +109,9 @@ class MyBorrowsResponse(BaseModel):
     page: int
     size: int
     pages: int
+
+# 统一成功的响应模型
+class SuccessResponse(BaseModel):
+    code: str = "SUCCESS"
+    message: str = "操作成功"
+    data: Any = None

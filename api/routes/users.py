@@ -1,34 +1,33 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from core.models import User
 from core.services import LibraryService
 from api.schemas import UserRegisterSchema,UserResponse, to_user_response
 from core.dtos import UserCreateDto
-from api.dependencies import get_library_service
+from api.dependencies import get_library_service, get_db
 from core.security import get_password_hash
 import uuid
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from core.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token
+from sqlalchemy.orm import Session
 import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 @router.post("/register", response_model=UserResponse,summary="注册用户")
-def create_user(user_in: UserRegisterSchema, service: LibraryService = Depends(get_library_service)):
-    try:
-        hashed_pw = get_password_hash(user_in.password)
-        dto = UserCreateDto(
-            user_id=str(uuid.uuid4()),
-            username=user_in.username,
-            name=user_in.name,
-            hashed_password=hashed_pw,
-            is_active=True
-        )
-        added_user = service.add_user(dto)
-        return to_user_response(added_user)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+def create_user(user_in: UserRegisterSchema, 
+                db: Session = Depends(get_db),  
+                service: LibraryService = Depends(get_library_service)):
+    hashed_pw = get_password_hash(user_in.password)
+    dto = UserCreateDto(
+        user_id=str(uuid.uuid4()),
+        username=user_in.username,
+        name=user_in.name,
+        hashed_password=hashed_pw,
+        is_active=True
+    )
+    added_user = service.add_user(dto)
+    return to_user_response(added_user)
     
 
 # ✅ 使用 `OAuth2PasswordRequestForm` 是 FastAPI 推荐做法，Swagger UI 会自动显示登录框！

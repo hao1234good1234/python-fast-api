@@ -10,8 +10,7 @@ class SqlAlchemyUserRepository(UserRepository):
     def add(self, user: UserCreateDto) -> User:
         db_user = UserDB(user_id=user.user_id, name=user.name, username=user.username, hashed_password=user.hashed_password, is_active=user.is_active)
         self._session.add(db_user)
-        self._session.commit()
-        self._session.refresh(db_user) # 获取数据库生成的值（如默认值）
+        self._session.flush()  # 立即获取生成的 ID，但不 commit
         return self._to_domain(db_user)
     
     def get_by_id(self, user_id: str) -> User | None:
