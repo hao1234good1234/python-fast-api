@@ -15,6 +15,7 @@ import os
 import uvicorn
 from api.exception_handlers import register_exception_handlers
 from middleware.middleware import DBSessionMiddleware
+from settings import settings
 
 # ✅ 第一次运行时，`data/library.db` 会自动创建，表也会生成！
 #  Base 不仅是个基类，它还偷偷记住了所有继承它的子类（也就是你的表）！
@@ -29,8 +30,8 @@ Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI(
-    debug=True,
     title="图书馆管理系统",
+    debug=settings.APP_ENV == "development",
     description="""
     一个简单的图书借阅系统，支持：
     - 添加图书

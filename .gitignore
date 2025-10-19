@@ -34,6 +34,7 @@ venv/
 .env/
 .env
 ENV/
+.env.*
 
 # Build artifacts
 dist/

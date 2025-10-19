@@ -12,7 +12,6 @@ from core.exceptions import (
     BookAlreadyReturnError,
     UsernameExistsError,
     BookExistsError,
-    BookNotFoundError,
 )
 
 # - `LibraryService` 负责 **资源管理**：图书和用户的 **增删改查（CRUD）,以及用户的 **借阅**
