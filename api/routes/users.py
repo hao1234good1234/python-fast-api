@@ -23,6 +23,7 @@ def create_user(user_in: UserRegisterSchema,
         user_id=str(uuid.uuid4()),
         username=user_in.username,
         name=user_in.name,
+        email=user_in.email,
         hashed_password=hashed_pw,
         is_active=True
     )

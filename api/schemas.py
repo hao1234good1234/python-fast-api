@@ -77,6 +77,7 @@ class UserRegisterSchema(BaseModel):
     name: str = Field(
         ..., description="用户姓名", example="张三"
     )  # `name` 是用于展示的昵称或真实姓名（可重复、可修改）
+    email: str = Field(..., description="用户邮箱", example="hao1234good1234@163.com")
 
 
 class UserResponse(BaseModel):
@@ -97,16 +98,6 @@ def to_user_response(user: User) -> UserResponse:
         username=user.username,
         is_active=user.is_active,
     )
-
-
-# 借阅管理
-class BorrowRequest(BaseModel):
-    isbn: str = Field(..., description="国际标准书号", example="999-0134685994")
-
-
-# 公共通用响应
-class CommonResponse(BaseModel):
-    message: str
 
 
 # 分页相关的响应模型
@@ -151,3 +142,43 @@ class SuccessResponse(BaseModel):
                 "data": {"isbn": "999-0134685994"},
             }
         }
+# 借阅图书返回响应模型
+class BookBorrowResponse(BaseModel):
+    borrow_id: int
+    book_isbn: str
+    borrower_id: str
+    borrowed_at: datetime
+    due_date: datetime
+    task_id: str
+
+
+# 异步任务返回响应模型
+class TaskResponse:
+    """统一任务响应格式"""
+    def __init__(self, task_id: str, state: str, ready: bool):
+        self.task_id = task_id
+        self.state = state
+        self.ready = ready
+
+    def to_response(self) -> dict:
+        base = {
+            "task_id": self.task_id,
+            "status": self.state,
+            "ready": self.ready,
+        }
+
+        if self.state == "SUCCESS":
+            base["message"] = "任务执行成功"
+        elif self.state == "FAILURE":
+            base["message"] = "任务执行失败"
+        elif self.state == "PENDING":
+            base["message"] = "任务等待执行"
+        elif self.state == "STARTED":
+            base["message"] = "任务正在执行中..."
+        elif self.state == "RETRY":
+            base["message"] = "任务正在重试"
+        elif self.state == "REVOKED":
+            base["message"] = "任务已被取消"
+
+        return base
+    

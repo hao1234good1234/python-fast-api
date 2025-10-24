@@ -38,6 +38,7 @@ class User:
     user_id: str   # 用户唯一ID（比如 UUID）
     username: str   # 登录用的用户名
     name: str  # 真实姓名
+    email: str
     hashed_password: str   # 密码（已经加密过的，不能是明文！）
     is_active: bool = True # 用户是否可用？默认是（防止被封号）
 

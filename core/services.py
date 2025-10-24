@@ -13,6 +13,8 @@ from core.exceptions import (
     UsernameExistsError,
     BookExistsError,
 )
+from core.logger import get_logger
+logger = get_logger(__name__)
 
 # - `LibraryService` 负责 **资源管理**：图书和用户的 **增删改查（CRUD）,以及用户的 **借阅**
 BORROW_DURATION_DAYS = 7  # 借阅期限：7天
@@ -83,6 +85,8 @@ class BorrowService:
 
     # 借书
     def borrow_book(self, isbn: str, borrower_id: str) -> BorrowBookDto:
+
+
         # 1、检查图书是否存在
         book = self.book_repo.get_by_isbn(isbn)
         if not book:
@@ -110,6 +114,32 @@ class BorrowService:
         book.is_borrowed = True
         book.borrowed_by = borrower_id
         self.book_repo.save(book)
+
+        # 记录结构化日志
+        # 🔑 关键点：
+        # - 使用 `extra={}` 传入结构化字段
+        # - `event` 字段便于日志系统做分类统计（如告警、仪表盘）
+        # - **不要记录敏感信息**（如密码、完整 token）
+
+        # 结构化日志
+        # 总结：你只需要记住三件事
+        # 1. **写日志用 `logger.info("消息", extra={结构化数据})`**
+        # 2. **开发看文字，生产看 JSON**
+        # 3. **敏感信息（密码、token）绝对不要打日志！**
+        logger.info(
+            "用户借了一本书",
+            extra={  # 结构化数据（电脑用的），`extra={}` 是 Python 日志的特殊参数，用来传**额外字段**，这些字段会被 `CustomJsonFormatter` 自动放进 JSON 里
+                "event": "BOOK_BORROWED",
+                "user_id": borrower_id,
+                "book_isbn": isbn,
+                "book_title": book.title,
+                "borrow_date": str(datetime.now(timezone.utc).date()),
+            }
+        )
+
+       
+
+
 
         # 6. 返回结果
         return BorrowBookDto(

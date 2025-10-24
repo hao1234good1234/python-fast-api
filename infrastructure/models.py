@@ -1,6 +1,6 @@
 #  第四步：定义 ORM 模型（`database/models.py`）
 # SQLAlchemy 模型
-from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime, Integer
+from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime, Integer, JSON, Text
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime, timezone
 
@@ -28,6 +28,7 @@ class UserDB(Base):
     name = Column(
         String, nullable=False
     )  # `name` 是用于展示的昵称或真实姓名（可重复、可修改）
+    email = Column(String, nullable=False)
     # 新增字段
     username = Column(
         String, unique=True, index=True
@@ -55,10 +56,24 @@ class BorrowRecordDB(Base):
     returned_at = Column(DateTime(timezone=True), nullable=True)
     is_returned = Column(Boolean, default=False)
     is_overdue = Column(Boolean, default=False)
+    #     - 每次借书，**新增一条记录**
+    # - `due_date = borrowed_at + 7天`（可配置）
+    # - `returned_at` 和 `is_returned` 初始为 `None` / `False`
 
+    # ✅ 图书表 `BookDB` 已有 `is_borrowed` 和 `borrowed_by` 字段。
 
-#     - 每次借书，**新增一条记录**
-# - `due_date = borrowed_at + 7天`（可配置）
-# - `returned_at` 和 `is_returned` 初始为 `None` / `False`
+# 日志表
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    
+    id = Column(Integer, primary_key=True,index=True)
+    action = Column(String(50), nullable=False)   # 例如: "borrow_created", "book_deleted"
+    user_id = Column(String, nullable=True)   # 操作人（可为空，如系统任务）
+    timestamp = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))  # 记录时间
+    details = Column(JSON, nullable=True)  # 存储额外上下文，如 {"book_id": 123}
+    ip_address = Column(String(45), nullable=True)     # 可选：记录 IP
+    user_agent = Column(Text, nullable=True)  # 可选：浏览器信息
 
-# ✅ 图书表 `BookDB` 已有 `is_borrowed` 和 `borrowed_by` 字段。
+    # 🔸 使用 `JSON` 类型（PostgreSQL/MySQL 5.7+ 支持）可以灵活存储结构化日志内容
+    # 🔸 如果用 SQLite，可以用 `Text` 存 JSON 字符串，并在应用层 `json.loads/dumps`
+

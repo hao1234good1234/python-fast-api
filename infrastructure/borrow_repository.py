@@ -78,8 +78,9 @@ class SqlAlchemyBorrowRepository(BorrowRepository):
         returned_at = db_borrow.returned_at
         if due_date.tzinfo is None:
             dute_date = due_date.replace(tzinfo=timezone.utc)
-        if returned_at.tzinfo is None:
-            returned_at = returned_at.replace(tzinfo=timezone.utc)
+        if returned_at is not None:
+            if returned_at.tzinfo is None:
+                returned_at = returned_at.replace(tzinfo=timezone.utc)
         return BorrowRecordDto(
             id=db_borrow.id,
             book_isbn=db_borrow.book_isbn,

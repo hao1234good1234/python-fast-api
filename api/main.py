@@ -7,15 +7,17 @@ logging.basicConfig(
     force=True,
 )
 from fastapi import FastAPI
-from api.routes import books, users, borrows, auth
+from api.routes import books, users, borrows, auth, tasks
 
 from infrastructure.connection import engine
 from infrastructure.models import Base
 import os
 import uvicorn
 from api.exception_handlers import register_exception_handlers
-from middleware.middleware import DBSessionMiddleware
+from middleware.dbsession_middleware import DBSessionMiddleware
+from middleware.logging_middleware import logging_middleware
 from settings import settings
+
 
 # ✅ 第一次运行时，`data/library.db` 会自动创建，表也会生成！
 #  Base 不仅是个基类，它还偷偷记住了所有继承它的子类（也就是你的表）！
@@ -54,6 +56,10 @@ app = FastAPI(
 register_exception_handlers(app)
 # 注册中间件, 统一管理数据库事务
 app.add_middleware(DBSessionMiddleware)
+# 添加结构化日志中间件
+# `app.middleware("http")`：告诉 FastAPI，“我要注册一个 HTTP 中间件”
+# 效果：**从此以后，每一个 HTTP 请求都会先经过 `logging_middleware`**
+app.middleware("http")(logging_middleware)
 
 
 app.include_router(books.router, prefix="/books", tags=["图书管理"])
@@ -63,6 +69,8 @@ app.include_router(users.router, prefix="/users", tags=["用户管理"])
 app.include_router(borrows.router, prefix="/borrows", tags=["借阅管理"])
 
 app.include_router(auth.router, prefix="/auth", tags=["获取当前token的用户信息"])
+
+app.include_router(tasks.router, prefix="/tasks", tags=["异步任务管理"])
 # 启动项目
 # uvicorn main:app --reload
 # 修改端口

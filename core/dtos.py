@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 class UserCreateDto:
     user_id: str
     name: str
+    email: str
     username: str
     hashed_password: str # **在 DTO 中直接存 `hashed_password`**
     is_active: bool = True
