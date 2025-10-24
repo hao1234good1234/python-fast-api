@@ -1,4 +1,4 @@
-from celery import Celery
+from celery import Celery, shared_task
 from core.celery_app import celery_app
 import time
 from utils.email_utils import send_email_163
@@ -13,6 +13,12 @@ logger = get_logger(__name__)
 
 # 模拟发送欢迎邮件的异步任务
 @celery_app.task(bind=True)
+@shared_task(
+    autoretry_for=(Exception,),       # 哪些异常触发重试
+    retry_kwargs={"max_retries": 3},  # 最多重试 3 次
+    retry_backoff=10,           # 每次重试间隔 10 秒（指数退避）
+    retry_jitter=True   # 添加随机抖动，避免雪崩
+)
 def send_email_task(self, to_email: str, subject: str, body: str):
     """
     模拟发送邮件的异步任务
@@ -20,8 +26,13 @@ def send_email_task(self, to_email: str, subject: str, body: str):
     print(f"正在发送借书邮件给 {to_email}")
     logger.info(f"正在发送借书邮件给 {to_email}")
 
+    # 模拟随机失败（用于测试重试）
+    # if random.random() < 0.8:  # 80% 概率失败
+    #     raise Exception("邮件发送失败：网络超时")
+
     # 这里可以调用真实的邮件服务，比如 SMTP 或第三方 API
     send_email_163(to_email=to_email, subject=subject, body=body)
+    
     print(f"借书邮件已经发送到 {to_email}")
     logger.info(f"借书邮件已经发送到 {to_email}")
     return f"借书邮件已经发送到 {to_email}"
